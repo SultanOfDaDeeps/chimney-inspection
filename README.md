@@ -10,15 +10,16 @@ stay private unless you choose to show them.
 
 This is a private page on claude.ai. Open it on your iPhone while signed in to your Claude account (Safari or the
 Claude app); your computer doesn't need to be on. It isn't public — only you, and people you share it with from the
-page's Share menu, can open it. Inside this hosted page the browser sandbox blocks a few things, so:
+page's Share menu, can open it. Inside this hosted page the browser blocks outside network calls and direct downloads,
+so a few features work through claude.ai instead:
 
-| Works in the hosted copy | Not available in the hosted copy |
+| Feature | In the hosted copy |
 |---|---|
-| Estimates, system type, guided problems, measurements, repairs | **Save PDF** (file downloads are blocked; use *Copy customer text*) |
-| Photos and videos from the camera or library | |
-| Title and proposed-work writing, preview, copying | **Photo analysis** (outside network calls are blocked) |
-| Private copy to WhatsApp (opens WhatsApp in a new tab) | **Share internal PDF** (the share sheet is blocked) |
-| Catalog and size editing, settings | **Export backup** (file downloads are blocked); restoring a backup works |
+| Estimates, system type, guided problems, measurements, repairs, photos and videos, title and description, preview, copying, catalog, sizes, settings, restoring a backup | Same as anywhere |
+| **Save PDF** and **Export backup** | Work; claude.ai asks you to confirm each save |
+| **Photo analysis** | Works with no API key: it uses Claude on your claude.ai account, and asks you once to allow the page to use Claude |
+| Private copy to WhatsApp | Opens WhatsApp in a new tab, or use *Copy private text* |
+| **Share internal PDF** | Not available (the share sheet is blocked); use Save PDF with *Include internal pricing*, or *Copy private text* |
 
 **Full-featured hosting (recommended for everyday use; about 10 minutes, free):** publish this folder to a static HTTPS
 host. Simplest: sign in at <https://app.netlify.com/drop> and drag the app folder (with `index.html`, `styles.css`,
@@ -250,6 +251,7 @@ When you return from the preview, the editor opens the **After the preview** car
   either, those details go on a separate last page and every page is marked "Internal copy".
 - **Copy customer text** copies the customer document as plain text.
 - **Private copy to WhatsApp** (next section).
+- An internal PDF (either box ticked) is saved as **INTERNAL - …pdf**, so it can't be mistaken for the customer PDF.
 - **Mark as presented** is in the editor's **More** menu.
 
 ## Private copy to WhatsApp
@@ -267,6 +269,8 @@ so nothing can send it anywhere else.
 
 - **Open WhatsApp with private copy** opens `https://wa.me/16144963246` with the full text already typed (on iPhone, in
   the WhatsApp app). **You tap Send.** If that number is your own, WhatsApp opens your "Message yourself" chat.
+- **Copy private text** copies the same text, for pasting into your own WhatsApp chat yourself — for example if a very
+  long message doesn't come through whole by the link.
 - **Share internal PDF…** (iPhone and other devices with a share sheet, not in the hosted claude.ai copy) creates the
   internal PDF with notes and pricing and opens the share sheet; pick WhatsApp and your own chat.
 - The card shows exactly what happened: *opened, not confirmed sent*; *handed to the share sheet*; *cancelled, nothing
@@ -315,13 +319,24 @@ identification research, photo-analysis results, old access notes, hidden photos
 
 ## Photo analysis (optional)
 
-**Settings → Photo analysis**: paste an Anthropic API key to turn it on. The app then calls the Claude API directly from
-the browser (model `claude-opus-5-5` by default). For each photo it suggests the component, manufacturer/model (gas
-labels), visible condition, and a matching problem, each with a confidence level and short explanation. You must
-confirm, correct, or ignore every suggestion; only confirmed values are used, and only to pre-select choices. Unclear
-photos are flagged and you choose manually. Each analysis sends the photo plus your catalog's component and finding
-names — no customer details. The key stays in this browser and is left out of backups; usage is billed to your
-Anthropic account. Without a key, photos are attached and you identify everything manually.
+For each photo the analysis suggests the component, manufacturer/model (gas labels), visible condition, and a matching
+problem, each with a confidence level and short explanation. You must confirm, correct, or ignore every suggestion; only
+confirmed values are used, and only to pre-select choices. Unclear photos are flagged and you choose manually. Each
+analysis sends the photo (scaled to 1568 px) plus your catalog's component and finding names — no customer details.
+The result is kept with the photo for your records and never reaches the customer document.
+
+There are two ways it runs, chosen automatically:
+
+- **In the hosted claude.ai copy:** it uses Claude on your claude.ai account through the page. No API key is needed or
+  stored; the first time, claude.ai asks you to allow the page to use Claude (and to send it images). Usage counts
+  toward your Claude plan.
+- **Anywhere else (your own web address or computer):** **Settings → Photo analysis**, paste an Anthropic API key. The
+  app calls the Claude API directly from the browser (model `claude-opus-5-5` by default). The key stays in this
+  browser and is left out of backups; usage is billed to your Anthropic account. The key is never in the app's code,
+  and the page's Content-Security-Policy only allows it to be sent to `api.anthropic.com`.
+
+Without either, photos are attached and you identify everything manually. Failures (no connection, a rejected key, rate
+limits, a declined or unreadable answer) are explained and you continue manually.
 
 ## Catalog
 
@@ -336,7 +351,11 @@ entries never changes saved estimates.
 
 No setup is needed: open the app as before. On first load it migrates data in place without deleting or rewording anything.
 
-- **Version 10 (this update):** the 2,000-character limit is removed. Descriptions include every measurement, repair
+- **Version 11 (this update):** on installs created after version 2, the starter firebox, damper, smoke chamber,
+  connector, and sweep entries were never marked wood-only, so gas jobs offered them too. They are now marked
+  wood-only — but only entries still in their starter wording; anything you edited keeps its setting. Restoring a backup
+  is now all-or-nothing: if it fails, your current data is left exactly as it was.
+- **Version 10:** the 2,000-character limit is removed. Descriptions include every measurement, repair
   detail, risk, and expected result, with plain explanations of each part and a Next Steps section. Existing descriptions
   keep their wording until you choose **Rewrite from selections**.
 - **Version 9:** the customer estimate uses a conventional U.S. layout (Estimate heading, customer details,
@@ -375,12 +394,14 @@ component. Lookup never touches findings or repairs.
 ## Limitations
 
 - One device and one browser per copy of the data; no sync. Use export/restore to move data.
-- The hosted claude.ai copy has been published but not opened on an iPhone in testing; it can't save PDFs, export backups, or
-  run photo analysis (see the table at the top).
+- The hosted copy's claude.ai features (confirmed saves, photo analysis on your Claude account) were tested against
+  the published page contract with a stand-in, not inside claude.ai itself; check them once on your phone.
 - Videos are stored, not converted; whether one plays depends on the viewing browser. Tested here with a WebM clip in
   Chrome; iPhone `.mov` playback has not been tested on a real iPhone.
-- Photo analysis needs your own Anthropic API key and an internet connection; it has not been run against the live API
-  in testing here. A photo can suggest but never establishes a diagnosis.
+- Photo analysis needs an internet connection, and outside claude.ai your own Anthropic API key. Testing here checked
+  the exact request the app sends and that the live API answers it (an invalid key is rejected and explained), but no
+  real analysis came back, because no valid key or claude.ai viewer was available. A photo can suggest but never
+  establishes a diagnosis.
 - The title and description are rule-based, not AI-written: accurate to your selections; edit as needed.
 - WhatsApp delivery isn't automatic: the app opens WhatsApp with the message ready, and you send it. It can't confirm
   delivery. It hasn't been tried on a real iPhone, and no test message was sent.
@@ -388,3 +409,15 @@ component. Lookup never touches findings or repairs.
 - PDFs use the standard PDF fonts (Helvetica and Times) rather than the app's on-screen fonts. Characters outside
   Western European text (for example emoji) are left out of the PDF.
 - Keyboard: `/` focuses search, `N` starts a new estimate from the list, `Esc` closes dialogs, `Ctrl/⌘+S` saves.
+
+## Tests
+
+The `tests/` folder drives the real app in Chromium with Playwright (no other dependencies; the PDF checks use
+poppler-utils and Python's `pypdf`):
+
+```bash
+node tests/e2e.mjs       # the whole workflow, Save PDF, copy, WhatsApp link, duplicate/delete, backup/restore, phone layout
+node tests/ai.mjs        # photo analysis: request sent, review flow, every failure, live API with a bad key, hosted route
+node tests/pdf.mjs       # PDFs: empty, 15 repairs with 12 photos, special characters
+node tests/features.mjs  # catalog, sizes, identification, presenting, autosave, shortcuts, injection safety
+```
