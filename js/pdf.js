@@ -224,7 +224,8 @@ const PdfExport = (() => {
     }
 
     // Photos with captions
-    if (m.photos.length) { doc.heading('Photos'); mediaGrid(doc, await loadMedia(m.photos)); }
+    // Keep the heading with the first row of photos rather than alone at the foot of a page.
+    if (m.photos.length) { doc.ensure(36 + 200); doc.heading('Photos'); mediaGrid(doc, await loadMedia(m.photos)); }
 
     // Pricing chosen for the customer
     if (m.pricing.shown || m.pricing.discount) {

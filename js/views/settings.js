@@ -7,6 +7,7 @@ const SettingsView = (() => {
   async function show(mount) {
     const s = await Store.settings();
     const ai = await AI.config();
+    const aiMode = await AI.mode();
     const f = (name, label, opts = {}) => `<div class="field ${opts.cls || ''}"><label for="s-${name}">${label}</label>
       ${opts.textarea ? `<textarea id="s-${name}" name="${name}" rows="${opts.rows || 3}">${esc(s[name])}</textarea>`
         : `<input id="s-${name}" name="${name}" type="${opts.type || 'text'}" value="${esc(s[name])}">`}
@@ -40,7 +41,13 @@ const SettingsView = (() => {
         <div class="form-actions"><span class="spacer"></span><button class="primary" type="submit">Save settings</button></div>
       </form>
 
-      <form id="ai-settings" class="card" novalidate>
+      ${aiMode === 'hosted' ? `<section class="card">
+        <h2>Photo analysis <span class="opt">optional</span></h2>
+        <p class="small">✓ Photo analysis is on in this hosted page. It uses Claude on your claude.ai account, so no API key is needed;
+          the first time, you're asked to allow this page to use Claude.</p>
+        <p class="small muted">Each analysis sends the photo plus your catalog's component and finding names; customer details are not sent.
+          Suggestions are never used until you confirm them.</p>
+      </section>` : `<form id="ai-settings" class="card" novalidate>
         <h2>Photo analysis <span class="opt">optional</span></h2>
         <p class="small">With an Anthropic API key, photos get suggestions for the component, label (manufacturer/model), and visible condition,
           which you confirm or correct. Without one, photos are still attached and you choose everything manually.</p>
@@ -53,11 +60,12 @@ const SettingsView = (() => {
             <select id="ai-model" name="model">${AI.MODELS.map(([v, l]) => `<option value="${v}" ${v === ai.model ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
         </div>
         <p class="small" id="ai-status">${ai.apiKey ? '✓ Photo analysis is on.' : 'Photo analysis is off.'}</p>
+        <p class="form-error" role="alert" hidden></p>
         <div class="form-actions">
           ${ai.apiKey ? '<button type="button" class="danger" data-act="ai-remove">Remove key</button>' : ''}
           <span class="spacer"></span><button class="primary" type="submit">Save photo analysis</button>
         </div>
-      </form>
+      </form>`}
 
       <section class="card">
         <h2>Data & backup</h2>
@@ -101,9 +109,14 @@ const SettingsView = (() => {
       }
     });
 
-    U.$('#ai-settings', mount).addEventListener('submit', async e => {
+    U.$('#ai-settings', mount)?.addEventListener('submit', async e => {
       e.preventDefault();
       const key = U.$('#ai-key', mount).value.trim();
+      const errEl = U.$('#ai-settings .form-error', mount);
+      if (key && !/^sk-ant-\S{10,}$/.test(key)) {
+        errEl.textContent = 'That doesn’t look like an Anthropic API key (it starts with sk-ant-).'; errEl.hidden = false; return;
+      }
+      errEl.hidden = true;
       await AI.saveConfig({ ...ai, model: U.$('#ai-model', mount).value, apiKey: key || ai.apiKey });
       U.toast(key ? 'Photo analysis is on' : 'Saved');
       window.dispatchEvent(new HashChangeEvent('hashchange')); // re-render with a fresh view
@@ -111,21 +124,33 @@ const SettingsView = (() => {
   }
 
   async function exportBackup() {
-    if (U.framed) {
-      U.toast('This hosted view can’t save files. Export from the app at its own web address instead.', 'error');
-      return;
-    }
     U.toast('Preparing backup…');
-    const [estimates, findings, repairs, photos, meta] = await Promise.all(
-      ['estimates', 'findings', 'repairs', 'photos', 'meta'].map(s => DB.getAll(s)));
-    const photoData = [];
-    for (const p of photos) {
-      photoData.push({ ...p, blob: await Photos.blobToDataURL(p.blob), thumb: p.thumb ? await Photos.blobToDataURL(p.thumb) : null });
+    try {
+      const [estimates, findings, repairs, photos, meta] = await Promise.all(
+        ['estimates', 'findings', 'repairs', 'photos', 'meta'].map(s => DB.getAll(s)));
+      const photoData = [];
+      for (const p of photos) {
+        photoData.push({ ...p, blob: p.blob ? await Photos.blobToDataURL(p.blob) : null, thumb: p.thumb ? await Photos.blobToDataURL(p.thumb) : null });
+      }
+      // The photo-analysis API key never leaves this browser.
+      const out = { app: 'chimney-estimator', version: 2, exportedAt: new Date().toISOString(), estimates, findings, repairs,
+        meta: meta.filter(m => m.key !== 'ai'), photos: photoData };
+      const res = await U.saveFile(`chimney-estimator-backup-${U.today()}.json`, new Blob([JSON.stringify(out)], { type: 'application/json' }));
+      U.toast(res === 'declined' ? 'Backup not saved' : `Backup saved (${estimates.length} estimates, ${photos.length} photos and videos)`);
+    } catch (err) {
+      U.toast(`Backup failed: ${err.message}`, 'error');
     }
-    // The photo-analysis API key never leaves this browser.
-    const out = { app: 'chimney-estimator', version: 2, exportedAt: new Date().toISOString(), estimates, findings, repairs,
-      meta: meta.filter(m => m.key !== 'ai'), photos: photoData };
-    U.download(`chimney-estimator-backup-${U.today()}.json`, new Blob([JSON.stringify(out)], { type: 'application/json' }));
+  }
+
+  // Checks a parsed backup before anything is replaced; returns a problem description or ''.
+  function backupProblem(data) {
+    if (!data || data.app !== 'chimney-estimator') return 'That file is not a backup from this app.';
+    for (const k of ['estimates', 'findings', 'repairs', 'photos']) {
+      if (!Array.isArray(data[k])) return `The backup is incomplete (no ${k} list).`;
+      if (data[k].some(r => !r || typeof r.id !== 'string' || !r.id)) return `The backup has a damaged ${k} entry.`;
+    }
+    if (data.meta !== undefined && (!Array.isArray(data.meta) || data.meta.some(m => !m || typeof m.key !== 'string'))) return 'The backup has damaged settings.';
+    return '';
   }
 
   function importBackup() {
@@ -137,24 +162,25 @@ const SettingsView = (() => {
       if (!file) return;
       let data;
       try { data = JSON.parse(await file.text()); } catch (e) { U.toast('That file is not valid JSON.', 'error'); return; }
-      if (data.app !== 'chimney-estimator') { U.toast('That file is not a backup from this app.', 'error'); return; }
-      if (!await U.confirm(`Replace ALL current data with this backup from ${U.fmtDateTime(data.exportedAt)}? (${data.estimates.length} estimates, ${data.findings.length + data.repairs.length} catalog entries, ${data.photos.length} photos)`)) return;
+      const problem = backupProblem(data);
+      if (problem) { U.toast(problem, 'error'); return; }
+      if (!await U.confirm(`Replace ALL current data with this backup from ${U.fmtDateTime(data.exportedAt) || 'an unknown date'}? (${data.estimates.length} estimates, ${data.findings.length + data.repairs.length} catalog entries, ${data.photos.length} photos and videos)`)) return;
       try {
         const photos = [];
-        for (const p of data.photos) photos.push({ ...p, blob: await Photos.dataURLToBlob(p.blob), thumb: p.thumb ? await Photos.dataURLToBlob(p.thumb) : null });
+        for (const p of data.photos) {
+          photos.push({ ...p, blob: p.blob ? await Photos.dataURLToBlob(p.blob) : null, thumb: p.thumb ? await Photos.dataURLToBlob(p.thumb) : null });
+        }
         const aiCfg = await DB.get('meta', 'ai'); // keep this browser's API key across the restore
-        await DB.clearAll();
-        await DB.putMany('estimates', data.estimates);
-        await DB.putMany('findings', data.findings);
-        await DB.putMany('repairs', data.repairs);
-        await DB.putMany('meta', data.meta.filter(m => m.key !== 'ai'));
-        await DB.putMany('photos', photos);
-        if (aiCfg) await DB.put('meta', aiCfg);
+        // One transaction: if any write fails, the current data is left exactly as it was.
+        await DB.replaceAll({
+          estimates: data.estimates, findings: data.findings, repairs: data.repairs, photos,
+          meta: [...(data.meta || []).filter(m => m.key !== 'ai'), ...(aiCfg ? [aiCfg] : [])],
+        });
         // Reload so start-up migrations run on the restored (possibly older) data.
         location.hash = '#/estimates';
         location.reload();
       } catch (err) {
-        U.toast(`Restore failed: ${err.message}`, 'error');
+        U.toast(`Restore failed — your current data was not changed. ${err.message || ''}`, 'error');
       }
     });
     input.click();

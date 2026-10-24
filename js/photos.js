@@ -141,6 +141,15 @@ const Photos = (() => {
     return newId;
   }
 
+  // A smaller JPEG for sending to photo analysis (Claude reads images at about this size anyway).
+  async function forAnalysis(blob, maxEdge = 1568) {
+    const src = await decode(blob);
+    if (Math.max(src.width, src.height) <= maxEdge && blob.type === 'image/jpeg') { if (src.close) src.close(); return blob; }
+    const out = await scaleTo(src, maxEdge, 0.85);
+    if (src.close) src.close();
+    return out.blob;
+  }
+
   const blobToDataURL = blob => new Promise((res, rej) => {
     const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob);
   });
@@ -148,5 +157,5 @@ const Photos = (() => {
 
   const fmtSize = n => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
-  return { importFile, importMedia, url, hydrate, remove, copy, forget, blobToDataURL, dataURLToBlob, fmtSize };
+  return { importFile, importMedia, url, hydrate, remove, copy, forget, forAnalysis, blobToDataURL, dataURLToBlob, fmtSize };
 })();

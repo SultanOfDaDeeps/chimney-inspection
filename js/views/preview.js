@@ -45,17 +45,14 @@ function savePdf(est, m) {
       <div class="modal-actions"><button type="button" data-close>Cancel</button><button type="button" class="primary" data-act="save">Save PDF</button></div>`,
     onMount: (dlg, close) => {
       U.$('[data-act=save]', dlg).addEventListener('click', async e => {
-        if (U.framed) {
-          U.toast('This hosted view can’t save files. Open the app from its own web address to save PDFs.', 'error');
-          return;
-        }
         e.target.disabled = true; e.target.textContent = 'Creating PDF…';
         try {
           const extras = PdfExport.extrasFor(est, { notes: U.$('#pdf-notes', dlg).checked, pricing: U.$('#pdf-pricing', dlg).checked });
           const blob = await PdfExport.build(m, extras);
-          U.download(PdfExport.fileName(m, extras.sections.length > 0), blob);
+          const res = await U.saveFile(PdfExport.fileName(m, extras.sections.length > 0), blob);
           close();
-          U.toast(extras.sections.length ? 'Internal PDF saved to this device' : 'PDF saved to this device');
+          if (res === 'declined') U.toast('PDF not saved');
+          else U.toast(extras.sections.length ? 'Internal PDF saved to this device' : 'PDF saved to this device');
         } catch (err) {
           e.target.disabled = false; e.target.textContent = 'Save PDF';
           U.toast(`Could not create the PDF: ${err.message}`, 'error');

@@ -37,7 +37,9 @@ const DB = (() => {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(stores, mode);
       let result;
-      Promise.resolve(fn(tx)).then(r => { result = r; }, reject);
+      // Any error in fn aborts the transaction, so nothing it queued is committed.
+      const fail = err => { try { tx.abort(); } catch (e) { /* already finished */ } reject(err); };
+      try { Promise.resolve(fn(tx)).then(r => { result = r; }, fail); } catch (err) { fail(err); }
       tx.oncomplete = () => resolve(result);
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
@@ -58,6 +60,14 @@ const DB = (() => {
       req2p(tx.objectStore('photos').index('estimateId').getAll(estimateId))),
     clearAll: () => run(['estimates', 'findings', 'repairs', 'photos', 'meta'], 'readwrite', tx => {
       for (const s of ['estimates', 'findings', 'repairs', 'photos', 'meta']) tx.objectStore(s).clear();
+    }),
+    // Replace every store's contents in one transaction (backup restore): all or nothing.
+    replaceAll: data => run(['estimates', 'findings', 'repairs', 'photos', 'meta'], 'readwrite', tx => {
+      for (const s of ['estimates', 'findings', 'repairs', 'photos', 'meta']) {
+        const os = tx.objectStore(s);
+        os.clear();
+        (data[s] || []).forEach(v => os.put(v));
+      }
     }),
   };
 })();

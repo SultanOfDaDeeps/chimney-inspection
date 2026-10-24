@@ -122,6 +122,27 @@ U.confirm = (message, okLabel = 'Confirm') => new Promise(resolve => {
 // True when the app runs inside another page's frame (e.g. a hosted claude.ai page), where printing is unavailable.
 U.framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 
+// A runtime capability of a hosted claude.ai page (e.g. 'downloads', 'sample'), or null anywhere else.
+U.capability = name => (window.claude && typeof window.claude.use === 'function'
+  ? Promise.resolve().then(() => window.claude.use(name)).catch(() => null) : Promise.resolve(null));
+
+// Save a file to this device. In a hosted claude.ai page the viewer confirms the save; elsewhere it
+// downloads directly. Resolves 'saved' or 'declined'; rejects with a readable message otherwise.
+U.saveFile = async (filename, blob) => {
+  const dl = await U.capability('downloads');
+  if (dl) {
+    try { await dl.save({ filename, data: blob }); return 'saved'; } catch (e) {
+      if (e && e.code === 'declined') return 'declined';
+      if (e && e.code === 'rate_limited') throw new Error('Another save is still waiting for your answer. Try again in a moment.');
+      if (e && e.code === 'too_large') throw new Error('The file is too large to save here.');
+      throw new Error(`The file could not be saved here (${(e && e.code) || 'unavailable'}).`);
+    }
+  }
+  if (U.framed) throw new Error('This hosted view can’t save files. Open the app from its own web address to save it.');
+  U.download(filename, blob);
+  return 'saved';
+};
+
 U.download = (filename, blob) => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

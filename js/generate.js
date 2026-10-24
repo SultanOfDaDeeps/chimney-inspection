@@ -93,12 +93,13 @@ const Generate = (() => {
     const work = [...new Set(repairsOf(e).map(r => asNoun(r.name)).filter(Boolean))];
     const count = NUMBERS[work.length] || String(work.length);
     const thanks = `Thank you for considering ${biz || 'us'}.`;
-    const limit = 'This estimate covers only these items; it isn’t a full inspection of the chimney.';
+    const one = work.length === 1;
+    const limit = `This estimate covers only ${one ? 'this item' : 'these items'}; it isn’t a full inspection of the chimney.`;
     if (!work.length) return `${thanks} Below is what we documented on ${on}, with an explanation of each condition. ${limit}`;
     const what = isPackage(e)
       ? `This estimate describes the ${count} repairs included in the package for ${on}: ${listJoin(work)}.`
       : `This estimate describes ${count === 'one' ? 'the repair' : `${count} repairs`} we recommend for ${on}: ${listJoin(work)}.`;
-    return `${thanks} ${what} For each one, we explain what we found, why it matters, exactly what the work includes, `
+    return `${thanks} ${what} ${one ? 'Below' : 'For each one'}, we explain what we found, why it matters, exactly what the work includes, `
       + `and what it will accomplish, so you have the full picture before deciding. ${limit}`;
   }
 
@@ -107,7 +108,9 @@ const Generate = (() => {
     if (!repairsOf(e).length) return '';
     return isPackage(e)
       ? 'Taken together, this package takes care of every condition described above in one coordinated project. Completing it helps protect your home and gives you peace of mind about these parts of your chimney.'
-      : `Taken together, ${repairsOf(e).length > 1 ? 'these repairs address every condition' : 'this repair addresses the condition'} described above. Completing the work helps protect your home and gives you peace of mind about these parts of your chimney.`;
+      : repairsOf(e).length > 1
+        ? 'Taken together, these repairs address every condition described above. Completing the work helps protect your home and gives you peace of mind about these parts of your chimney.'
+        : 'This repair addresses the condition described above. Completing the work helps protect your home and gives you peace of mind about this part of your chimney.';
   }
 
   // What each part is, in plain words, given the first time a part comes up.
