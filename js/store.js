@@ -27,6 +27,7 @@ const Store = (() => {
     await migrateCatalogV3();
     await migrateCatalogV5();
     await migrateCatalogV8();
+    await migrateCatalogV11();
     await Sizes.init();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   }
@@ -102,6 +103,20 @@ const Store = (() => {
       .map(f => ({ ...f, risk: SEED_V8_RISKS[f.code], updatedAt: new Date().toISOString() }));
     await DB.putMany('findings', writes);
     await DB.put('meta', { key: 'catalog-v8', value: new Date().toISOString() });
+  }
+
+  // Data version 11: installs created after version 2 never got the wood-only tag on the starter
+  // firebox, damper, smoke chamber, connector, and sweep entries, so gas jobs offered them too.
+  // Tag the ones still in their starter wording and offered for every system; edited entries are left alone.
+  async function migrateCatalogV11() {
+    if (await DB.get('meta', 'catalog-v11')) return;
+    const starter = {};
+    for (const i of [...SEED.findings, ...SEED.repairs]) starter[i.code] = new Set([i.description, SEED_V5_DESCRIPTIONS[i.code]].filter(Boolean));
+    const tag = list => list.filter(i => SEED_V2.woodOnly.test(i.code) && Array.isArray(i.appliesTo) && !i.appliesTo.length
+      && starter[i.code] && starter[i.code].has(i.description)).map(i => ({ ...i, appliesTo: ['wood'] }));
+    await DB.putMany('findings', tag(await DB.getAll('findings')));
+    await DB.putMany('repairs', tag(await DB.getAll('repairs')));
+    await DB.put('meta', { key: 'catalog-v11', value: new Date().toISOString() });
   }
 
   // Catalog reads always go through here so older records get the newer optional fields.

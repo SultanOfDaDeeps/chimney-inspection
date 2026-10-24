@@ -468,6 +468,7 @@ const EditorView = (() => {
         ${privateStatusHtml()}
         <div class="btn-row">
           <a class="btn primary" data-wa href="${esc(PrivateCopy.link(''))}" target="_blank" rel="noopener">Open WhatsApp with private copy</a>
+          <button type="button" data-action="copy-private">Copy private text</button>
           ${PrivateCopy.canSharePdf() ? '<button type="button" data-action="share-private-pdf">Share internal PDF…</button>' : ''}
           ${est.privateCopy && ['opened', 'shared'].includes(est.privateCopy.status) ? '<button type="button" data-action="private-sent">I sent it</button><button type="button" data-action="private-not-sent">Not sent</button>' : ''}
         </div>
@@ -1059,6 +1060,12 @@ if (a === 'expand-all' || a === 'collapse-all') {
     if (a === 'copy-customer') {
       const ok = await U.copyText(Customer.text(Customer.model(est, lastSettings)));
       U.toast(ok ? 'Customer text copied' : 'Copy failed', ok ? '' : 'error');
+      return;
+    }
+    if (a === 'copy-private') {
+      // For pasting into WhatsApp yourself, e.g. if a very long message doesn't arrive whole through the link.
+      const ok = await U.copyText(PrivateCopy.text(est, lastSettings));
+      U.toast(ok ? 'Private text copied — paste it only into your own chat' : 'Copy failed', ok ? '' : 'error');
       return;
     }
     if (a === 'share-private-pdf') {

@@ -182,6 +182,10 @@ try {
   await settle(800);
   check(/Not confirmed sent/.test(await page.textContent('[data-live=pc-status]')), 'status says opened, not confirmed sent');
 
+  await page.click('[data-action=copy-private]'); await settle();
+  const pclip = await page.evaluate(() => navigator.clipboard.readText());
+  check(pclip.startsWith('PRIVATE COPY') && pclip.includes('Internal pricing'), 'private text can be copied for pasting');
+
   console.log('Estimates list: search, duplicate, delete');
   await page.goto(url + '#/estimates'); await settle();
   await page.fill('#est-q', 'Elm'); await settle();

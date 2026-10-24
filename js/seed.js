@@ -334,5 +334,8 @@ function buildSeedRecords(seed, existing = { findings: [], repairs: [] }) {
 }
 
 function buildSeedCatalog() {
-  return buildSeedRecords(SEED);
+  const out = buildSeedRecords(SEED);
+  // Starter entries that only make sense for wood systems (see SEED_V2.woodOnly).
+  [...out.findings, ...out.repairs].forEach(i => { if (SEED_V2.woodOnly.test(i.code)) i.appliesTo = ['wood']; });
+  return out;
 }

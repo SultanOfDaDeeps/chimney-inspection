@@ -3,7 +3,7 @@
 // Offline support for a hosted (HTTPS) copy: the app's own files are fetched fresh when online
 // and served from this cache when the phone has no signal. Estimate data lives in IndexedDB,
 // not here, so updating this cache never touches saved estimates.
-const CACHE = 'apex-chimney-v5';
+const CACHE = 'apex-chimney-v6';
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest', './icon.svg',
   './js/util.js', './js/db.js', './js/seed.js', './js/photos.js', './js/sizes.js', './js/store.js', './js/generate.js',
