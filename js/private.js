@@ -85,7 +85,7 @@ const PrivateCopy = (() => {
   async function sharePdf(est, s) {
     const m = Customer.model(est, s);
     const blob = await PdfExport.build(m, PdfExport.extrasFor(est, { notes: true, pricing: true }));
-    const file = new File([blob], `PRIVATE - ${PdfExport.fileName(m)}`, { type: 'application/pdf' });
+    const file = new File([blob], PdfExport.fileName(m, true), { type: 'application/pdf' });
     await navigator.share({ files: [file], title: `Private copy — ${m.number}` });
   }
 

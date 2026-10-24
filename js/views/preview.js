@@ -53,7 +53,7 @@ function savePdf(est, m) {
         try {
           const extras = PdfExport.extrasFor(est, { notes: U.$('#pdf-notes', dlg).checked, pricing: U.$('#pdf-pricing', dlg).checked });
           const blob = await PdfExport.build(m, extras);
-          U.download(PdfExport.fileName(m), blob);
+          U.download(PdfExport.fileName(m, extras.sections.length > 0), blob);
           close();
           U.toast(extras.sections.length ? 'Internal PDF saved to this device' : 'PDF saved to this device');
         } catch (err) {

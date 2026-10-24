@@ -507,7 +507,7 @@ body.share-mode .app-bar { display: none; }
   .mobile-bar > * { flex: 1; font-size: 1.02rem; min-height: 50px; }
   main { padding-block: .9rem calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
   #toasts { bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)); }
-  .steps { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .steps { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; max-width: 100%; }
   .steps .step { flex: none; min-height: 36px; }
   .preview-bar > * { flex: 1 1 auto; }
   .preview-bar .spacer { display: none; }

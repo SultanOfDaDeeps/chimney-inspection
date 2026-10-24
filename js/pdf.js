@@ -335,7 +335,8 @@ const PdfExport = (() => {
     return { sections };
   }
 
-  const fileName = m => `${[m.number, m.client.name, m.title].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]+/g, '').slice(0, 120) || 'Estimate'}.pdf`;
+  // An internal copy is named apart so it can't be mistaken for the customer PDF.
+  const fileName = (m, internal = false) => `${internal ? 'INTERNAL - ' : ''}${[m.number, m.client.name, m.title].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]+/g, '').slice(0, 120) || 'Estimate'}.pdf`;
 
   return { build, extrasFor, fileName };
 })();
