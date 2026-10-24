@@ -219,6 +219,31 @@ try {
   check((await page.locator('.est-row').count()) === 2, 'restore brings back both estimates');
   check((await page.evaluate(async () => (await DB.getAll('photos')).length)) === 6, 'restore brings back all photos');
 
+  console.log('Restore refuses bad files');
+  const bad = [
+    ['not-json.json', 'this is not json', /not valid JSON/],
+    ['other-app.json', JSON.stringify({ app: 'something-else' }), /not a backup from this app/],
+    ['no-photos.json', JSON.stringify({ ...bj, photos: undefined }), /incomplete/],
+    ['url-photo.json', JSON.stringify({ ...bj, photos: [{ ...bj.photos[0], blob: 'https://example.com/x.jpg' }] }), /damaged photo/],
+  ];
+  for (const [name, body, expect] of bad) {
+    fs.writeFileSync(path.join(OUT, name), body);
+    await page.goto(url + '#/settings'); await settle();
+    await chooseFiles(() => page.click('[data-act=import]'), [path.relative(FX, path.join(OUT, name))]);
+    await settle(600);
+    check(expect.test(await toast()) && !(await page.isVisible('dialog.modal')), `${name} is refused before anything changes`);
+  }
+  check((await page.evaluate(async () => (await DB.getAll('estimates')).length)) === 2, 'data is unchanged after refused restores');
+
+  const rollback = await page.evaluate(async () => {
+    const before = (await DB.getAll('estimates')).length;
+    let err = '';
+    // The third estimate has no id, so its write fails after the stores were already cleared.
+    try { await DB.replaceAll({ estimates: [{ id: 'a' }, { id: 'b' }, { name: 'no id' }], findings: [], repairs: [], photos: [], meta: [] }); } catch (e) { err = e.name || e.message; }
+    return { err, before, after: (await DB.getAll('estimates')).length, findings: (await DB.getAll('findings')).length };
+  });
+  check(rollback.err && rollback.after === rollback.before && rollback.findings > 0, `a restore that fails part-way changes nothing (${rollback.err}; ${rollback.after} estimates kept)`);
+
   console.log('Mobile layout');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(estUrl); await settle(800);

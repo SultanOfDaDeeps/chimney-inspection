@@ -150,6 +150,8 @@ const SettingsView = (() => {
       if (data[k].some(r => !r || typeof r.id !== 'string' || !r.id)) return `The backup has a damaged ${k} entry.`;
     }
     if (data.meta !== undefined && (!Array.isArray(data.meta) || data.meta.some(m => !m || typeof m.key !== 'string'))) return 'The backup has damaged settings.';
+    // Media must be embedded data, never a web address the app would fetch.
+    if (data.photos.some(p => [p.blob, p.thumb].some(v => v != null && !(typeof v === 'string' && v.startsWith('data:'))))) return 'The backup has a damaged photo or video.';
     return '';
   }
 
