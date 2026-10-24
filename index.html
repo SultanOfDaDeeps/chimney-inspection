@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Apex Chimney">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <meta name="format-detection" content="telephone=no">
+  <title>Apex Chimney</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="app-bar no-print">
+    <a class="brand" href="#/estimates">Apex Chimney</a>
+    <nav class="app-nav" aria-label="Main">
+      <a href="#/estimates" data-nav="estimates">Estimates</a>
+      <a href="#/catalog/findings" data-nav="catalog">Catalog</a>
+      <a href="#/settings" data-nav="settings">Settings</a>
+    </nav>
+  </header>
+  <main id="main" tabindex="-1"></main>
+  <div id="toasts" class="no-print" aria-live="polite"></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/seed.js"></script>
+  <script src="js/photos.js"></script>
+  <script src="js/sizes.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/generate.js"></script>
+  <script src="js/customer.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/private.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/views/estimates.js"></script>
+  <script src="js/views/identify.js"></script>
+  <script src="js/views/wizard.js"></script>
+  <script src="js/views/editor.js"></script>
+  <script src="js/views/preview.js"></script>
+  <script src="js/views/catalog.js"></script>
+  <script src="js/views/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
